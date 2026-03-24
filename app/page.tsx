@@ -801,18 +801,28 @@ export default function Home(){
       </div>
       {generatedSynopses.length>0&&(
         <div style={{display:'flex',flexDirection:'column',gap:10}}>
-          {generatedSynopses.map((s:any,i:number)=>{const content=typeof s==='string'?s:s.content||JSON.stringify(s);const sel=selectedSynopsisIdx===i;return(
+          {generatedSynopses.map((s:any,i:number)=>{const content=typeof s==='string'?s:s.content||JSON.stringify(s);const styleLabel=typeof s==='object'&&s.style?s.style:'';const sel=selectedSynopsisIdx===i;return(
             <div key={i} onClick={()=>{setSelectedSynopsisIdx(i);setShowSynopsisConfirm(true);}}
-              style={{padding:14,borderRadius:10,cursor:'pointer',
-                background:sel?'rgba(16,185,129,0.15)':'rgba(255,255,255,0.04)',
-                border:sel?'2px solid #10b981':'1px solid rgba(255,255,255,0.08)',transition:'all 0.15s'}}>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-                <span style={{fontSize:13,fontWeight:600,color:sel?'#10b981':'#e2e8f0'}}>
-                  시놉시스 #{i+1} {typeof s==='object'&&s.style&&`— ${s.style}`}
-                </span>
-                {sel&&<span style={{fontSize:11,color:'#10b981'}}>✓ 선택됨</span>}
+              style={{padding:18,borderRadius:12,cursor:'pointer',
+                background:sel?'rgba(16,185,129,0.12)':'rgba(255,255,255,0.03)',
+                border:sel?'2px solid #10b981':'1px solid rgba(255,255,255,0.1)',transition:'all 0.2s',
+                boxShadow:sel?'0 0 20px rgba(16,185,129,0.1)':'none'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontSize:18}}>{['📕','📗','📘','📙','📓'][i]||'📖'}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:sel?'#10b981':'#e2e8f0'}}>
+                    시놉시스 #{i+1}
+                  </span>
+                  {styleLabel&&<span style={{fontSize:11,padding:'2px 8px',borderRadius:20,background:sel?'rgba(16,185,129,0.2)':'rgba(139,92,246,0.15)',color:sel?'#34d399':'#a78bfa',fontWeight:500}}>{styleLabel}</span>}
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <span style={{fontSize:11,color:'#718096'}}>{content.length.toLocaleString()}자</span>
+                  {sel&&<span style={{fontSize:11,padding:'2px 8px',borderRadius:20,background:'rgba(16,185,129,0.2)',color:'#10b981',fontWeight:600}}>✓ 선택됨</span>}
+                </div>
               </div>
-              <div style={{fontSize:12,color:'#a0aec0',lineHeight:1.6,maxHeight:sel?'none':'60px',overflow:'hidden'}}>{content}</div>
+              <div style={{fontSize:13,color:sel?'#d1d5db':'#a0aec0',lineHeight:1.8,maxHeight:sel?'none':'80px',overflow:'hidden',
+                whiteSpace:'pre-wrap',wordBreak:'keep-all'}}>{content}</div>
+              {!sel&&content.length>200&&<div style={{fontSize:11,color:'#4a5568',marginTop:6,textAlign:'center'}}>▼ 클릭하여 전체 보기</div>}
             </div>);})}
         </div>
       )}
@@ -2058,4 +2068,5 @@ export default function Home(){
     </div>
   );
 }
+
 

@@ -1,0 +1,82 @@
+﻿429: 
+430:   /* F25-F27 시놉시스 5개 */
+431:   const handleGenerateSynopses=async()=>{
+432:     const prompt=`주제: ${selectedTitle||topic}\n장르: ${GENRE_MAP[genre]?.label||'일반'} > ${GENRE_MAP[genre]?.subs[subGenre]?.label||''}\n\n위 주제로 서로 다른 스타일의 시놉시스 5개를 JSON 배열로 만들어주세요.\n각 시놉시스는 {style, content} 형태입니다.\n챕터 수: ${chapterCount}개 기준`;
+433:     const r=await callApi('generate-synopsis',{topic:selectedTitle||topic,genre:GENRE_MAP[genre]?.label,chapterCount,customPrompt:prompt});
+434:     try{const arr=JSON.parse(r);if(Array.isArray(arr)){setGeneratedSynopses(arr);return;}}catch{}
+435:     setGeneratedSynopses([{style:'기본',content:r}]);
+436:   };
+437: 
+438:   /* F28-F30 캐릭터 재분석 */
+439:   const handleCharacterAnalysis=async()=>{
+440:     const synopsis=generatedSynopses[selectedSynopsisIdx]?.content||results['synopsis']||'';
+441:     const prompt=`다음 시놉시스를 분석하여 등장인물을 추출하고, 권장 화자 수를 제안해주세요.\n\n${synopsis}\n\nJSON 형식: {recommendedCount: 숫자, characters: [{name, role, personality, voiceType}]}`;
+442:     const r=await callApi('analyze-characters',{script:synopsis,customPrompt:prompt});
+443:     try{const d=JSON.parse(r);if(d.characters){setCharacters(d.characters);setRecommendedSpeakerCount(d.recommendedCount||d.characters.length);return;}}catch{}
+444:     setResult(r);
+445:   };
+446: 
+447:   /* F33 대본 생성 */
+448:   const handleScript=async()=>{
+449:     const customPrompt=buildScriptPrompt();
+450:     const r=await callApi('generate-script',{topic:selectedTitle||topic,platform,category,duration,audience,customPrompt});
+451:     setResults(p=>({...p,'script-gen':r}));
+452:     setRegisteredScript(r);
+453:   };
+454: 
+455:   /* F35-F36 대본 확장 */
+456:   const handleExpand=async()=>{
+457:     const script=registeredScript||results['script-gen']||'';
+458:     const r=await callApi('expand-script',{script,targetLength:expandLength,customPrompt:`이 대본을 ${expandLength}자 이상으로 확장하세요. 각 챕터의 디테일을 풍부하게 만들어주세요.`});
+459:     setExpandedScript(r);
+460:     setResults(p=>({...p,'script-expand':r}));
+461:   };
+462: 
+463:   const registerExpandedScript=()=>{
+464:     if(expandedScript){setRegisteredScript(expandedScript);alert('대본이 등록되었습니다!');}
+465:   };
+466: 
+
+=== RENDER ===
+796:         <h4 style={{color:'#e2e8f0',fontSize:15,margin:0}}>📖 시놉시스 생성 (5개)</h4>
+797:         <button onClick={handleGenerateSynopses} disabled={loading}
+798:           style={{padding:'8px 20px',borderRadius:8,fontSize:12,fontWeight:600,border:'none',cursor:'pointer',background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff'}}>
+799:           {loading?'생성 중...':'📝 시놉시스 생성'}
+800:         </button>
+801:       </div>
+802:       {generatedSynopses.length>0&&(
+803:         <div style={{display:'flex',flexDirection:'column',gap:10}}>
+804:           {generatedSynopses.map((s:any,i:number)=>{const content=typeof s==='string'?s:s.content||JSON.stringify(s);const sel=selectedSynopsisIdx===i;return(
+805:             <div key={i} onClick={()=>{setSelectedSynopsisIdx(i);setShowSynopsisConfirm(true);}}
+806:               style={{padding:14,borderRadius:10,cursor:'pointer',
+807:                 background:sel?'rgba(16,185,129,0.15)':'rgba(255,255,255,0.04)',
+808:                 border:sel?'2px solid #10b981':'1px solid rgba(255,255,255,0.08)',transition:'all 0.15s'}}>
+809:               <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+810:                 <span style={{fontSize:13,fontWeight:600,color:sel?'#10b981':'#e2e8f0'}}>
+811:                   시놉시스 #{i+1} {typeof s==='object'&&s.style&&`— ${s.style}`}
+812:                 </span>
+813:                 {sel&&<span style={{fontSize:11,color:'#10b981'}}>✓ 선택됨</span>}
+814:               </div>
+815:               <div style={{fontSize:12,color:'#a0aec0',lineHeight:1.6,maxHeight:sel?'none':'60px',overflow:'hidden'}}>{content}</div>
+816:             </div>);})}
+817:         </div>
+818:       )}
+819:       {/* 시놉시스 확정 모달 F27 */}
+820:       {showSynopsisConfirm&&selectedSynopsisIdx>=0&&(
+821:         <div style={{marginTop:16,padding:16,borderRadius:10,background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.3)'}}>
+822:           <p style={{color:'#10b981',fontSize:13,marginBottom:12}}>이 줄거리로 진행하시겠습니까?</p>
+823:           <div style={{display:'flex',gap:8}}>
+824:             <button onClick={()=>{setSynopsisConfirmed(true);setShowSynopsisConfirm(false);
+825:               const content=typeof generatedSynopses[selectedSynopsisIdx]==='string'?generatedSynopses[selectedSynopsisIdx]:generatedSynopses[selectedSynopsisIdx].content;
+826:               setResults(p=>({...p,synopsis:content}));handleCharacterAnalysis();}}
+827:               style={{flex:1,padding:10,borderRadius:8,fontSize:13,fontWeight:600,border:'none',cursor:'pointer',background:'#10b981',color:'#fff'}}>
+828:               ✅ 줄거리 확정 + 캐릭터 분석
+829:             </button>
+830:             <button onClick={()=>setShowSynopsisConfirm(false)}
+831:               style={{padding:'10px 20px',borderRadius:8,fontSize:13,border:'none',cursor:'pointer',background:'rgba(255,255,255,0.08)',color:'#cbd5e0'}}>
+832:               취소
+833:             </button>
+834:           </div>
+835:         </div>
+836:       )}
+
