@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
@@ -123,6 +123,11 @@ export default function Home() {
     if (!getKey()) { setResult('❌ API 키를 설정해 주세요.'); return; }
     callApi('generate-script', { topic, platform, category, duration, audience });
   }
+  function handleGenerateScript() {
+    if (!topic) { setResult('❌ 주제를 입력해 주세요.'); return; }
+    callApi('generate-script', { topic, platform, category, duration, audience });
+  }
+
   function handleEdit() {
     if (!scriptText) { setResult('❌ 대본을 입력해 주세요.'); return; }
     if (editMode === 'polish') callApi('polish-script', { script: scriptText, platform });
@@ -246,7 +251,7 @@ export default function Home() {
                 {select(targetLang, setTargetLang, [{ v: 'en', l: '영어' }, { v: 'ja', l: '일본어' }, { v: 'zh', l: '중국어' }, { v: 'es', l: '스페인어' }, { v: 'vi', l: '베트남어' }, { v: 'th', l: '태국어' }])}
               </>
             )}
-            {btn('✨ 실행', handleEdit)}
+            {btn('✏️ 대본 생성', handleGenerateScript)}
           </div>
         );
       case 'guidelines':
