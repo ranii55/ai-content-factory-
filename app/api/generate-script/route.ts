@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     if (aiProvider === 'gemini') {
       const res = await fetch(
-        \`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=\${apiKey}\`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -43,18 +43,18 @@ export async function POST(req: NextRequest) {
       );
       const data = await res.json();
       if (data.error) {
-        return NextResponse.json({ error: \`Gemini API 오류: \${data.error.message}\` }, { status: 500 });
+        return NextResponse.json({ error: `Gemini API 오류: ${data.error.message}` }, { status: 500 });
       }
       result = data.candidates?.[0]?.content?.parts?.[0]?.text || '결과를 생성할 수 없습니다.';
     } else if (aiProvider === 'openai') {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: \`Bearer \${apiKey}\` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 4000 })
       });
       const data = await res.json();
       if (data.error) {
-        return NextResponse.json({ error: \`OpenAI API 오류: \${data.error.message}\` }, { status: 500 });
+        return NextResponse.json({ error: `OpenAI API 오류: ${data.error.message}` }, { status: 500 });
       }
       result = data.choices?.[0]?.message?.content || '결과를 생성할 수 없습니다.';
     } else if (aiProvider === 'claude') {
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       });
       const data = await res.json();
       if (data.error) {
-        return NextResponse.json({ error: \`Claude API 오류: \${data.error.message}\` }, { status: 500 });
+        return NextResponse.json({ error: `Claude API 오류: ${data.error.message}` }, { status: 500 });
       }
       result = data.content?.[0]?.text || '결과를 생성할 수 없습니다.';
     } else {
