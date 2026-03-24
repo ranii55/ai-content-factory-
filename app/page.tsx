@@ -251,6 +251,7 @@ export default function Home(){
   const [humanTouchLevel,setHumanTouchLevel]=useState('medium');
   const [creativeMode,setCreativeMode]=useState('balanced');
   const [contentFormat,setContentFormat]=useState('longform');
+  const [customDuration,setCustomDuration]=useState(false);
   const [outputLang,setOutputLang]=useState('ko');
   const [scriptInputMode,setScriptInputMode]=useState('ai');
   const [uploadedFileName,setUploadedFileName]=useState('');
@@ -414,16 +415,43 @@ export default function Home(){
   /* F20 주제 추천 */
   const handleSuggestTopics=async()=>{
     const r=await callApi('suggest-topics',{genre,subGenre,platform});
-    try{const arr=JSON.parse(r);if(Array.isArray(arr)){setSuggestedTopics(arr);return;}}catch{}
-    const lines=r.split('\n').map((l:string)=>l.replace(/^\d+[\.\)]\s*/,'').trim()).filter((l:string)=>l.length>3);
+    let clean=r.replace(/```json/gi,'').replace(/```/g,'').trim();
+    /* JSON 배열 추출 */
+    const bs=clean.indexOf('[');const be=clean.lastIndexOf(']');
+    if(bs!==-1&&be>bs){
+      try{
+        const arr=JSON.parse(clean.substring(bs,be+1));
+        if(Array.isArray(arr)){
+          const cleaned=arr.map((t:any)=>{
+            const s=typeof t==='string'?t:(t.title||t.topic||JSON.stringify(t));
+            return s.replace(/^["""']/,'').replace(/["""',;.\s]+$/,'').trim();
+          }).filter((s:string)=>s.length>2);
+          setSuggestedTopics(cleaned);return;
+        }
+      }catch{}
+    }
+    const lines=clean.split('\n').map((l:string)=>l.replace(/^\d+[\.\)]\s*/,'').replace(/^["""'-]+/,'').replace(/["""',;]+$/,'').trim()).filter((l:string)=>l.length>3&&!l.startsWith('```'));
     setSuggestedTopics(lines.slice(0,10));
   };
 
   /* F21-F24 제목 생성 */
   const handleGenerateTitles=async()=>{
     const r=await callApi('generate-titles',{topic,genre,subGenre,tone:toneId,platform,style:titleStyle});
-    try{const arr=JSON.parse(r);if(Array.isArray(arr)){setGeneratedTitles(arr);return;}}catch{}
-    const lines=r.split('\n').map((l:string)=>l.replace(/^\d+[\.\)]\s*/,'').replace(/^["""]/,'').replace(/["""]$/,'').trim()).filter((l:string)=>l.length>3);
+    let clean=r.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const bs=clean.indexOf('[');const be=clean.lastIndexOf(']');
+    if(bs!==-1&&be>bs){
+      try{
+        const arr=JSON.parse(clean.substring(bs,be+1));
+        if(Array.isArray(arr)){
+          const cleaned=arr.map((t:any)=>{
+            if(typeof t==='string')return t.replace(/^["""']+/,'').replace(/["""',;]+$/,'').trim();
+            return{...t,title:(t.title||'').replace(/^["""']+/,'').replace(/["""',;]+$/,'').trim()};
+          }).filter((t:any)=>(typeof t==='string'?t:t.title||'').length>2);
+          setGeneratedTitles(cleaned);return;
+        }
+      }catch{}
+    }
+    const lines=clean.split('\n').map((l:string)=>l.replace(/^\d+[\.\)]\s*/,'').replace(/^["""']+/,'').replace(/["""',;]+$/,'').trim()).filter((l:string)=>l.length>3&&!l.startsWith('```'));
     setGeneratedTitles(lines.slice(0,10));
   };
 
@@ -1154,7 +1182,7 @@ export default function Home(){
               )}
               <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginBottom:16}}>
                 {[{v:platform,s:setPlatform,opts:['youtube','shorts','tiktok']},{v:category,s:setCategory,opts:['일반','교육','엔터테인먼트','뉴스']},
-                  {v:duration,s:setDuration,opts:['3분','5분','8분','10분','15분','20분']},{v:audience,s:setAudience,opts:['일반','10대','20-30대','40대이상']}
+                  {v:duration,s:(val:string)=>{setDuration(val);setCustomDuration(false);},opts:contentFormat==='shorts'?['15초','30초','45초','60초']:['3분','5분','8분','10분','15분','20분']},{v:audience,s:setAudience,opts:['일반','10대','20-30대','40대이상']}
                 ].map((sel,i)=>(
                   <select key={i} value={sel.v} onChange={e=>sel.s(e.target.value)}
                     style={{padding:10,borderRadius:8,fontSize:12,background:'rgba(255,255,255,0.06)',color:'#e2e8f0',border:'1px solid rgba(255,255,255,0.1)'}}>
@@ -2100,6 +2128,7 @@ export default function Home(){
     </div>
   );
 }
+
 
 
 
