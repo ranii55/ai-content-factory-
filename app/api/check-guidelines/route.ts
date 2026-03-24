@@ -4,6 +4,7 @@ export async function POST(req: NextRequest) {
   try {
     const { script, scriptText, platform, aiProvider, apiKey } = await req.json();
     const text = script || scriptText;
+    console.log('DEBUG:', { script: !!script, scriptText: !!scriptText, text: !!text, apiKey: !!apiKey, aiProvider });
     if (!text || !apiKey) {
       return NextResponse.json({ error: '대본과 API 키가 필요합니다.' }, { status: 400 });
     }
