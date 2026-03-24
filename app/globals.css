@@ -3,101 +3,104 @@
 @tailwind utilities;
 
 /* ============================================
-   TPA Studio — 글로벌 가독성 패치
-   모든 텍스트를 밝은 색으로 강제 지정
+   TPA Studio — 강화 가독성 패치 v2
    ============================================ */
 
-/* 1. 기본 바디: 어두운 배경 + 밝은 글씨 */
 html, body {
-  background: #0a0a0a;
-  color: #e0e0e0 !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0a0a0f !important;
+  color: #e2e8f0 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* 2. 모든 요소에 밝은 텍스트 강제 */
-*, *::before, *::after {
-  color: inherit;
+/* 모든 요소 기본 텍스트 밝게 */
+body * {
+  border-color: rgba(100, 100, 180, 0.2);
 }
 
-/* 3. 입력 필드 — 어두운 배경 + 밝은 글씨 */
+/* 입력 필드 */
 input, textarea, select {
-  background: #1a1a2e !important;
+  background: rgba(15, 15, 35, 0.9) !important;
   color: #ffffff !important;
-  border-color: #333366 !important;
+  border: 1px solid rgba(100, 100, 200, 0.3) !important;
+  font-size: 14px !important;
 }
-
 input::placeholder, textarea::placeholder {
-  color: #888 !important;
+  color: #667 !important;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none !important;
+  border-color: rgba(99, 102, 241, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15) !important;
 }
 
-/* 4. 버튼 텍스트 */
+/* 버튼 항상 흰 글씨 */
 button {
   color: #ffffff !important;
+  font-weight: 500 !important;
 }
 
-/* 5. 라벨, 제목, 설명 텍스트 */
-label, h1, h2, h3, h4, h5, h6, p, span, div, li, td, th {
-  color: #e0e0e0;
+/* 시놉시스/결과 카드 내부 텍스트 */
+div[style*="overflow"][style*="auto"] {
+  color: #d1d5db !important;
+  font-size: 14px !important;
+  line-height: 1.75 !important;
 }
 
-/* 6. 링크 */
-a {
-  color: #7c8aff;
+/* 결과 영역 마크다운 */
+pre {
+  background: rgba(10, 10, 20, 0.95) !important;
+  color: #a5f3fc !important;
+  border: 1px solid rgba(100, 100, 200, 0.2) !important;
+  font-size: 13px !important;
+  line-height: 1.7 !important;
+}
+code {
+  color: #a78bfa !important;
 }
 
-/* 7. 사이드바 항목 */
-[style*="cursor: pointer"] {
-  color: #c0c0d0;
+/* 시놉시스 카드 텍스트 강제 가독성 */
+div[style*="background"][style*="border-radius"] p,
+div[style*="background"][style*="border-radius"] span,
+div[style*="background"][style*="border-radius"] div {
+  color: #e2e8f0 !important;
+  line-height: 1.7 !important;
 }
 
-/* 8. 선택된 탭/항목 강조 */
-[style*="background: linear-gradient"] {
+/* JSON 텍스트가 나올 때 가독성 확보 */
+div[style*="whiteSpace"] {
+  color: #d1d5db !important;
+  font-size: 14px !important;
+  line-height: 1.8 !important;
+  word-break: keep-all !important;
+}
+
+/* 사이드바 텍스트 */
+div[style*="width: 2"][style*="background"] span,
+div[style*="width: 2"][style*="background"] div {
+  color: #c0c4d0 !important;
+}
+
+/* 스크롤바 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #334; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #446; }
+
+/* 선택된 시놉시스 카드 */
+div[style*="border: 2px solid"] {
   color: #ffffff !important;
 }
 
-/* 9. 카드/패널 내부 텍스트 */
-[style*="background:"][style*="#1"] {
-  color: #e0e0e0 !important;
+/* 결과 텍스트 영역 최소 폰트 보장 */
+div[style*="fontSize: 13"] {
+  font-size: 14px !important;
+  line-height: 1.75 !important;
+  color: #d4d4dc !important;
 }
-
-[style*="background:"][style*="#0"] {
-  color: #e0e0e0 !important;
-}
-
-[style*="background:"][style*="#2"] {
-  color: #e0e0e0 !important;
-}
-
-/* 10. 결과 영역 마크다운 텍스트 */
-pre, code {
-  background: #111 !important;
-  color: #00ff88 !important;
-}
-
-/* 11. 스크롤바 스타일링 */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #0a0a0a;
-}
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 4px;
-}
-
-/* 12. 로그인 화면 텍스트 */
-input[type="password"] {
-  color: #ffffff !important;
-  background: #1a1a2e !important;
-}
-
-/* 13. 장르 카드 내 텍스트 확실히 보이게 */
-[style*="border-radius"] {
-  color: #e0e0e0;
-}
-
-/* 14. 모든 인라인 color 오버라이드 (최후 수단) */
-body * {
-  --force-text: #e0e0e0;
+div[style*="fontSize:13"] {
+  font-size: 14px !important;
+  line-height: 1.75 !important;
+  color: #d4d4dc !important;
 }

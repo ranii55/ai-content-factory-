@@ -190,6 +190,18 @@ function LoginScreen({onLogin}:{onLogin:()=>void}){
     </div></div>);
 }
 
+
+/* ── 시놉시스 파싱 헬퍼 ── */
+function parseSynopsis(raw:any):{style:string;content:string}{
+  if(!raw)return{style:'',content:''};
+  if(typeof raw==='object'&&raw.content)return{style:raw.style||'',content:raw.content};
+  if(typeof raw==='string'){
+    try{const m=raw.match(/\{[\s\S]*\}/);if(m){const o=JSON.parse(m[0]);return{style:o.style||'',content:o.content||raw};}}catch{}
+    try{const o=JSON.parse(raw);return{style:o.style||'',content:o.content||raw};}catch{}
+    return{style:'',content:raw};
+  }
+  return{style:'',content:JSON.stringify(raw)};
+}
 /* ── 마크다운 ── */
 function renderMarkdown(t:string){if(!t)return '';return t.replace(/```(\w*)\n([\s\S]*?)```/g,'<pre style="background:#0a0a1a;padding:14px;border-radius:8px;overflow-x:auto;border:1px solid #252550;margin:12px 0;font-size:13px;line-height:1.6"><code>$2</code></pre>').replace(/`([^`]+)`/g,'<code style="background:#1e1e3e;padding:2px 6px;border-radius:4px;font-size:13px;color:#a78bfa">$1</code>').replace(/^### (.+)$/gm,'<h3 style="color:#a78bfa;font-size:15px;margin:18px 0 6px">$1</h3>').replace(/^## (.+)$/gm,'<h2 style="color:#818cf8;font-size:17px;margin:22px 0 8px">$1</h2>').replace(/^# (.+)$/gm,'<h1 style="color:#6366f1;font-size:20px;margin:22px 0 10px">$1</h1>').replace(/\*\*(.+?)\*\*/g,'<strong style="color:#e2e8f0">$1</strong>').replace(/\*(.+?)\*/g,'<em style="color:#94a3b8">$1</em>').replace(/^---$/gm,'<hr style="border:none;border-top:1px solid #252550;margin:14px 0"/>').replace(/^(\d+)\. (.+)$/gm,'<div style="padding:3px 0 3px 8px"><span style="color:#6366f1;font-weight:700;margin-right:6px">$1.</span>$2</div>').replace(/^[-•] (.+)$/gm,'<div style="padding:3px 0 3px 8px"><span style="color:#6366f1;margin-right:6px">●</span>$1</div>').replace(/^> (.+)$/gm,'<div style="border-left:3px solid #4f46e5;padding:6px 12px;margin:6px 0;background:rgba(79,70,229,0.06);border-radius:0 6px 6px 0;color:#a5b4fc">$1</div>').replace(/\n\n/g,'<div style="height:10px"></div>').replace(/\n/g,'<br/>');}
 
@@ -2046,3 +2058,4 @@ export default function Home(){
     </div>
   );
 }
+
