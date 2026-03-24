@@ -45,8 +45,10 @@ export default function Home() {
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState('script');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState('');
   const [showKeys, setShowKeys] = useState(false);
+
+  // 탭별 결과 저장 (탭 이동해도 유지됨)
+  const [results, setResults] = useState<Record<string, string>>({});
 
   const [geminiKey, setGeminiKey] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');
@@ -78,6 +80,15 @@ export default function Home() {
   const [publishMode, setPublishMode] = useState('description');
   const [subtitleMode, setSubtitleMode] = useState('subtitles');
   const [mediaMode, setMediaMode] = useState('tts');
+
+  // 현재 탭의 결과 가져오기/설정하기
+  const result = results[tab] || '';
+  const setResult = (val: string) => setResults(prev => ({ ...prev, [tab]: val }));
+
+  // 현재 탭의 결과만 초기화
+  function handleReset() {
+    setResults(prev => ({ ...prev, [tab]: '' }));
+  }
 
   useEffect(() => {
     const a = localStorage.getItem('ai-factory-auth');
@@ -125,34 +136,41 @@ export default function Home() {
   }
   function handleEdit() {
     if (!scriptText) { setResult('❌ 대본을 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     if (editMode === 'polish') callApi('polish-script', { script: scriptText, platform });
     else if (editMode === 'rewrite') callApi('rewrite-script', { script: scriptText, platform, style: '트렌디' });
     else if (editMode === 'translate') callApi('translate-script', { script: scriptText, targetLanguage: targetLang, platform });
   }
   function handleGuidelines() {
     if (!scriptText) { setResult('❌ 대본을 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     callApi('check-guidelines', { script: scriptText, platform });
   }
   function handleAnalysis() {
     if (!videoUrl) { setResult('❌ 영상 URL을 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     if (analysisMode === 'video') callApi('analyze-video', { url: videoUrl, platform });
     else callApi('structure-analysis', { url: videoUrl, platform });
   }
   function handleMarket() {
     if (!keyword) { setResult('❌ 키워드를 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     if (marketMode === 'competitors') callApi('compare-competitors', { keyword, platform });
     else if (marketMode === 'seo') callApi('seo-analysis', { keyword, platform });
     else callApi('trends', { keyword, platform });
   }
   function handleSeries() {
     if (!topic) { setResult('❌ 주제를 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     callApi('plan-series', { topic, platform, episodeCount: 5 });
   }
   function handleCommunity() {
     if (!topic) { setResult('❌ 주제를 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     callApi('community-post', { topic, platform });
   }
   function handlePublish() {
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     if (publishMode === 'description') {
       if (!topic) { setResult('❌ 주제를 입력해 주세요.'); return; }
       callApi('generate-description', { title: topic, platform });
@@ -166,23 +184,28 @@ export default function Home() {
   }
   function handleAbTest() {
     if (!titles) { setResult('❌ 제목 후보를 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     const titleList = titles.split('\n').filter((t: string) => t.trim());
     callApi('title-ab-test', { titles: titleList, topic, platform });
   }
   function handleCalendar() {
     if (!topic) { setResult('❌ 채널 주제를 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     callApi('content-calendar', { topic, platform, weeks: parseInt(calendarWeeks), channelName });
   }
   function handleSubtitle() {
     if (!videoUrl) { setResult('❌ 영상 URL을 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     if (subtitleMode === 'subtitles') callApi('extract-subtitles', { url: videoUrl });
     else callApi('download-video', { url: videoUrl, platform });
   }
   function handleShopping() {
     if (!shopInput) { setResult('❌ URL 또는 키워드를 입력해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     callApi('shopping-content', { productName: shopInput, productPrice, productFeatures, platform, scriptStyle });
   }
   function handleMedia() {
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     if (mediaMode === 'tts') {
       if (!scriptText) { setResult('❌ 텍스트를 입력해 주세요.'); return; }
       callApi('tts-generate', { text: scriptText });
@@ -195,6 +218,11 @@ export default function Home() {
   const btn = (label: string, onClick: () => void, color = '#667eea') => (
     <button onClick={onClick} disabled={loading} style={{ padding: '12px 24px', borderRadius: 8, background: loading ? '#555' : color, color: '#fff', border: 'none', cursor: loading ? 'wait' : 'pointer', fontSize: 15, fontWeight: 600, width: '100%', marginTop: 8 }}>
       {loading ? '⏳ 처리 중...' : label}
+    </button>
+  );
+  const resetBtn = () => (
+    <button onClick={handleReset} style={{ padding: '10px 24px', borderRadius: 8, background: '#dc3545', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, width: '100%', marginTop: 6 }}>
+      🗑️ 초기화
     </button>
   );
   const input = (val: string, set: (v: string) => void, ph: string) => (
@@ -232,6 +260,7 @@ export default function Home() {
             <p style={{ color: '#aaa', marginBottom: 4 }}>주제</p>
             {input(topic, setTopic, '예: 왕초보 유튜브 시작하는 방법')}
             {btn('🚀 대본 생성', handleScript)}
+            {resetBtn()}
           </div>
         );
       case 'edit':
@@ -247,6 +276,7 @@ export default function Home() {
               </>
             )}
             {btn('✨ 편집 실행', handleEdit)}
+            {resetBtn()}
           </div>
         );
       case 'guidelines':
@@ -257,6 +287,7 @@ export default function Home() {
             {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
             {textarea(scriptText, setScriptText, '검사할 대본을 붙여넣으세요...')}
             {btn('✅ 가이드라인 체크', handleGuidelines)}
+            {resetBtn()}
           </div>
         );
       case 'analysis':
@@ -266,6 +297,7 @@ export default function Home() {
             {miniTab([{ id: 'video', label: '🎥 영상 분석' }, { id: 'structure', label: '🏗️ 구조 분석' }], analysisMode, setAnalysisMode)}
             {input(videoUrl, setVideoUrl, 'YouTube/TikTok 영상 URL 입력')}
             {btn('🔍 분석', handleAnalysis)}
+            {resetBtn()}
           </div>
         );
       case 'market':
@@ -276,6 +308,7 @@ export default function Home() {
             {input(keyword, setKeyword, '키워드 입력 (예: 유튜브 성장법)')}
             {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
             {btn('🔍 분석', handleMarket)}
+            {resetBtn()}
           </div>
         );
       case 'series':
@@ -285,6 +318,7 @@ export default function Home() {
             {input(topic, setTopic, '시리즈 주제 (예: 초보 유튜버 성장기)')}
             {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
             {btn('📚 시리즈 기획', handleSeries)}
+            {resetBtn()}
           </div>
         );
       case 'community':
@@ -294,6 +328,7 @@ export default function Home() {
             {input(topic, setTopic, '주제 입력')}
             {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
             {btn('💬 커뮤니티 글 생성', handleCommunity)}
+            {resetBtn()}
           </div>
         );
       case 'publish':
@@ -303,6 +338,7 @@ export default function Home() {
             {miniTab([{ id: 'description', label: '📄 설명란' }, { id: 'chapters', label: '📑 챕터' }, { id: 'checklist', label: '☑️ 체크리스트' }], publishMode, setPublishMode)}
             {publishMode === 'chapters' ? textarea(scriptText, setScriptText, '대본을 붙여넣으세요...') : input(topic, setTopic, '영상 제목/주제 입력')}
             {btn('📄 생성', handlePublish)}
+            {resetBtn()}
           </div>
         );
       case 'ab-test':
@@ -313,6 +349,7 @@ export default function Home() {
             {textarea(titles, setTitles, '제목 1\n제목 2\n제목 3')}
             {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
             {btn('🧪 A/B 분석', handleAbTest)}
+            {resetBtn()}
           </div>
         );
       case 'calendar':
@@ -325,6 +362,7 @@ export default function Home() {
             {select(calendarWeeks, setCalendarWeeks, [{ v: '1', l: '1주' }, { v: '2', l: '2주' }, { v: '4', l: '4주 (1달)' }])}
             {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
             {btn('📅 캘린더 생성', handleCalendar)}
+            {resetBtn()}
           </div>
         );
       case 'subtitle':
@@ -340,6 +378,7 @@ export default function Home() {
               </>
             )}
             {btn(subtitleMode === 'subtitles' ? '💬 자막 추출' : '⬇️ 정보 가져오기', handleSubtitle)}
+            {resetBtn()}
           </div>
         );
       case 'shopping':
@@ -373,6 +412,7 @@ export default function Home() {
             {input(productPrice, setProductPrice, '가격 (예: 29,900원)')}
             {input(productFeatures, setProductFeatures, '주요 특징 (예: 방수, 50시간 배터리)')}
             {btn('🛒 쇼핑 콘텐츠 생성', handleShopping)}
+            {resetBtn()}
           </div>
         );
       case 'media':
@@ -391,6 +431,7 @@ export default function Home() {
                 {btn('🖼️ 썸네일 생성', handleMedia)}
               </>
             )}
+            {resetBtn()}
           </div>
         );
       default:
@@ -429,10 +470,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* Tab Menu */}
+      {/* Tab Menu - 탭 이동해도 결과 유지! */}
       <div style={{ display: 'flex', overflowX: 'auto', gap: 4, padding: '12px 20px', borderBottom: '1px solid #222' }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); setResult(''); }} style={{ padding: '8px 14px', borderRadius: 8, border: tab === t.id ? '1px solid #667eea' : '1px solid #333', background: tab === t.id ? 'rgba(102,126,234,0.2)' : 'transparent', color: tab === t.id ? '#667eea' : '#888', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 13, flexShrink: 0 }}>
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: '8px 14px', borderRadius: 8, border: tab === t.id ? '1px solid #667eea' : '1px solid #333', background: tab === t.id ? 'rgba(102,126,234,0.2)' : 'transparent', color: tab === t.id ? '#667eea' : '#888', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 13, flexShrink: 0 }}>
             {t.icon} {t.label}
           </button>
         ))}
