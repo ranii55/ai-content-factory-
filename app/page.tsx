@@ -292,7 +292,7 @@ export default function Home(){
   /* TTS F37-F47 */
   const [ttsEngine,setTtsEngine]=useState('gemini');
   const [ttsSplitMode,setTtsSplitMode]=useState('punctuation');
-  const [ttsSegments,setTtsSegments]=useState<{speaker:string;text:string;status:string;engine:string}[]>([]);
+  const [ttsSegments,setTtsSegments]=useState<{speaker:string;text:string;status:string;engine:string;audioBase64?:string;mimeType?:string}[]>([]);
   const [ttsSpeakerEngines,setTtsSpeakerEngines]=useState<Record<string,string>>({});
   const [ttsProgress,setTtsProgress]=useState(0);
 
@@ -548,14 +548,54 @@ export default function Home(){
     }
   };
 
-  /* F42 TTS 전체 생성 (시뮬레이션) */
+  /* F42 TTS 전체 생성 (실제 API 호출) */
   const handleTtsGenerateAll=async()=>{
     setLoading(true);setTtsProgress(0);
     const total=ttsSegments.length;
+    const key=provider==='openai'?openaiKey:geminiKey;
     for(let i=0;i<total;i++){
-      setTtsSegments(prev=>{const n=[...prev];n[i]={...n[i],status:'done'};return n;});
+      try{
+        const seg=ttsSegments[i];
+        const engineToUse=seg.engine||ttsEngine;
+        const apiKey=engineToUse==='openai'?openaiKey:geminiKey;
+        /* 음성 매핑: 화자별 다른 음성 */
+        const voiceForSpeaker=(speaker:string)=>{
+          const voices=engineToUse==='openai'
+            ?['nova','onyx','shimmer','echo','alloy','fable']
+            :['Kore','Puck','Charon','Leda','Zephyr','Orion'];
+          const speakers=Array.from(new Set(ttsSegments.map(s=>s.speaker)));
+          const idx=speakers.indexOf(speaker);
+          return voices[idx%voices.length]||voices[0];
+        };
+        const res=await fetch('/api/tts-generate',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            text:seg.text,
+            voice:voiceForSpeaker(seg.speaker),
+            engine:engineToUse,
+            apiKey,
+            speed:1.0,
+          }),
+        });
+        const data=await res.json();
+        if(data.audioBase64){
+          setTtsSegments(prev=>{const n=[...prev];n[i]={...n[i],status:'done',audioBase64:data.audioBase64,mimeType:data.mimeType||'audio/wav'};return n;});
+        }else if(data.provider==='browser'){
+          /* 브라우저 TTS fallback */
+          if(typeof window!=='undefined'&&window.speechSynthesis){
+            const utter=new SpeechSynthesisUtterance(seg.text);
+            utter.lang='ko-KR';
+            window.speechSynthesis.speak(utter);
+          }
+          setTtsSegments(prev=>{const n=[...prev];n[i]={...n[i],status:'done',audioBase64:'',mimeType:''};return n;});
+        }else{
+          throw new Error(data.error||'TTS 실패');
+        }
+      }catch(err:any){
+        setTtsSegments(prev=>{const n=[...prev];n[i]={...n[i],status:'error'};return n;});
+      }
       setTtsProgress(Math.round(((i+1)/total)*100));
-      await new Promise(r=>setTimeout(r,200));
     }
     setLoading(false);
   };
@@ -1477,7 +1517,16 @@ export default function Home(){
                         <span style={{fontSize:11,color:'#cbd5e0',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{seg.text}</span>
                         <span style={{fontSize:9,color:'#4a5568'}}>{seg.engine}</span>
                         {seg.status==='done'&&<button style={{padding:'2px 8px',borderRadius:4,fontSize:10,border:'none',cursor:'pointer',background:'rgba(255,255,255,0.08)',color:'#a0aec0'}}>▶</button>}
-                        {seg.status==='error'&&<button onClick={()=>{const n=[...ttsSegments];n[i]={...n[i],status:'done'};setTtsSegments(n);}}
+                        {seg.status==='done'&&seg.audioBase64&&<button onClick={()=>{const audio=new Audio(`data:${seg.mimeType||'audio/wav'};base64,${seg.audioBase64}`);audio.play();}}
+                style={{padding:'4px 10px',borderRadius:6,fontSize:11,border:'none',cursor:'pointer',background:'#10b981',color:'#fff',marginRight:4}}>
+                ▶ 재생</button>}
+              {seg.status==='done'&&seg.audioBase64&&<button onClick={()=>{const link=document.createElement('a');link.href=`data:${seg.mimeType||'audio/wav'};base64,${seg.audioBase64}`;link.download=`tts_${i+1}_${seg.speaker}.wav`;link.click();}}
+                style={{padding:'4px 10px',borderRadius:6,fontSize:11,border:'none',cursor:'pointer',background:'#6366f1',color:'#fff',marginRight:4}}>
+                💾 저장</button>}
+              {seg.status==='done'&&!seg.audioBase64&&<button onClick={()=>{if(window.speechSynthesis){const u=new SpeechSynthesisUtterance(seg.text);u.lang='ko-KR';window.speechSynthesis.speak(u);}}}
+                style={{padding:'4px 10px',borderRadius:6,fontSize:11,border:'none',cursor:'pointer',background:'#f59e0b',color:'#000',marginRight:4}}>
+                🔈 브라우저 재생</button>}
+              {seg.status==='error'&&<button onClick={()=>{const n=[...ttsSegments];n[i]={...n[i],status:'pending'};setTtsSegments(n);}}
                           style={{padding:'2px 8px',borderRadius:4,fontSize:10,border:'none',cursor:'pointer',background:'rgba(239,68,68,0.2)',color:'#ef4444'}}>재생성</button>}
                       </div>
                     ))}
@@ -1486,6 +1535,18 @@ export default function Home(){
 
                 {/* 병합 F45 */}
                 {ttsSegments.length>0&&ttsSegments.every(s=>s.status==='done')&&(
+            <div style={{marginBottom:12,display:'flex',gap:8,flexWrap:'wrap'}}>
+              <button onClick={()=>{ttsSegments.forEach((seg,idx)=>{if(seg.audioBase64){const link=document.createElement('a');link.href=`data:${seg.mimeType||'audio/wav'};base64,${seg.audioBase64}`;link.download=`tts_${idx+1}_${seg.speaker}.wav`;link.click();}});}}
+                style={{padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:600,border:'none',cursor:'pointer',background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff'}}>
+                💾 전체 오디오 다운로드
+              </button>
+              <button onClick={()=>{const all=ttsSegments.filter(s=>s.audioBase64).map((s,i)=>`data:${s.mimeType||'audio/wav'};base64,${s.audioBase64}`);all.forEach((src,i)=>{setTimeout(()=>{const a=new Audio(src);a.play();},i*3000);});}}
+                style={{padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:600,border:'none',cursor:'pointer',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'#fff'}}>
+                ▶ 전체 순서대로 재생
+              </button>
+            </div>
+          )}
+          {ttsSegments.length>0&&ttsSegments.every(s=>s.status==='done')&&(
                   <button style={{marginTop:12,padding:'10px 24px',borderRadius:8,fontSize:13,fontWeight:600,border:'none',cursor:'pointer',background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff'}}>
                     🔗 전체 오디오 병합 + 자막 생성
                   </button>
@@ -2130,6 +2191,7 @@ export default function Home(){
     </div>
   );
 }
+
 
 
 
