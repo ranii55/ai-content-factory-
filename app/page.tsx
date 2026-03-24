@@ -429,9 +429,41 @@ export default function Home(){
 
   /* F25-F27 시놉시스 5개 */
   const handleGenerateSynopses=async()=>{
-    const prompt=`주제: ${selectedTitle||topic}\n장르: ${GENRE_MAP[genre]?.label||'일반'} > ${GENRE_MAP[genre]?.subs[subGenre]?.label||''}\n\n위 주제로 서로 다른 스타일의 시놉시스 5개를 JSON 배열로 만들어주세요.\n각 시놉시스는 {style, content} 형태입니다.\n챕터 수: ${chapterCount}개 기준`;
+    const prompt=`주제: ${selectedTitle||topic}\n장르: ${GENRE_MAP[genre]?.label||'일반'} > ${GENRE_MAP[genre]?.subs[subGenre]?.label||''}\n\n위 주제로 서로 다른 스타일의 시놉시스 5개를 만들어주세요.\n\n반드시 아래 JSON 배열 형식으로만 응답하세요. 마크다운 코드블록 없이, 순수 JSON만 출력:\n[{"style":"스타일이름","content":"시놉시스 내용"},{"style":"스타일이름","content":"시놉시스 내용"},{"style":"스타일이름","content":"시놉시스 내용"},{"style":"스타일이름","content":"시놉시스 내용"},{"style":"스타일이름","content":"시놉시스 내용"}]\n\n챕터 수: ${chapterCount}개 기준\n각 content는 최소 300자 이상 상세하게 작성하세요.`;
     const r=await callApi('generate-synopsis',{topic:selectedTitle||topic,genre:GENRE_MAP[genre]?.label,chapterCount,customPrompt:prompt});
-    try{const arr=JSON.parse(r);if(Array.isArray(arr)){setGeneratedSynopses(arr);return;}}catch{}
+    /* 강력 파싱 */
+    let clean=r.replace(/```json/gi,'').replace(/```/g,'').trim();
+    /* 방법1: 전체 JSON 배열 추출 */
+    const bracketStart=clean.indexOf('[');
+    const bracketEnd=clean.lastIndexOf(']');
+    if(bracketStart!==-1&&bracketEnd>bracketStart){
+      const jsonStr=clean.substring(bracketStart,bracketEnd+1);
+      try{
+        const arr=JSON.parse(jsonStr);
+        if(Array.isArray(arr)&&arr.length>0){
+          const valid=arr.map((item:any)=>{
+            if(typeof item==='string')return{style:'',content:item};
+            return{style:item.style||'',content:item.content||JSON.stringify(item)};
+          });
+          setGeneratedSynopses(valid);return;
+        }
+      }catch{}
+    }
+    /* 방법2: 개별 {style,content} 객체 추출 */
+    const objs:any[]=[];
+    const regex=/\{\s*"style"\s*:\s*"([^"]*)"\s*,\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"\s*\}/g;
+    let m;while((m=regex.exec(clean))!==null){
+      objs.push({style:m[1],content:m[2].replace(/\\n/g,'\n').replace(/\\"/g,'"')});
+    }
+    if(objs.length>1){setGeneratedSynopses(objs);return;}
+    /* 방법3: 번호 구분으로 분리 */
+    const parts=clean.split(/\n(?=\d+[\.\)]\s|\*\*\d+|시놉시스\s*#?\s*\d|#{1,3}\s*\d)/i).filter((s:string)=>s.trim().length>30);
+    if(parts.length>=3){
+      setGeneratedSynopses(parts.map((p:string,idx:number)=>{
+        const titleMatch=p.match(/^[#\d\.\)\*\s]*(.*?)[\n:]/);
+        return{style:titleMatch?titleMatch[1].trim():`스타일 ${idx+1}`,content:p.replace(/^[^\n]*\n/,'').trim()||p.trim()};
+      }));return;
+    }
     setGeneratedSynopses([{style:'기본',content:r}]);
   };
 
@@ -2068,5 +2100,6 @@ export default function Home(){
     </div>
   );
 }
+
 
 
