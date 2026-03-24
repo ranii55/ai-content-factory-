@@ -256,7 +256,7 @@ export default function Home() {
                 {select(targetLang, setTargetLang, [{ v: 'en', l: '영어' }, { v: 'ja', l: '일본어' }, { v: 'zh', l: '중국어' }, { v: 'es', l: '스페인어' }, { v: 'vi', l: '베트남어' }, { v: 'th', l: '태국어' }])}
               </>
             )}
-            {btn('✏️ 대본 생성', handleGenerateScript)}
+            {btn('✨ 편집 실행', handleEdit)}
           </div>
         );
       case 'guidelines':
