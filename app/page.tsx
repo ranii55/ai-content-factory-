@@ -25,6 +25,42 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
   );
 }
 
+/* ── 마크다운 → HTML 변환 함수 ── */
+function renderMarkdown(text: string) {
+  if (!text) return '';
+  let html = text
+    // 코드 블록
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre style="background:#0f0f23;padding:14px;border-radius:8px;overflow-x:auto;border:1px solid #333;margin:12px 0;font-size:13px;line-height:1.6"><code>$2</code></pre>')
+    // 인라인 코드
+    .replace(/`([^`]+)`/g, '<code style="background:#2a2a4a;padding:2px 6px;border-radius:4px;font-size:13px;color:#a78bfa">$1</code>')
+    // 제목
+    .replace(/^### (.+)$/gm, '<h3 style="color:#a78bfa;font-size:16px;margin:20px 0 8px 0;padding-bottom:4px;border-bottom:1px solid #333">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="color:#818cf8;font-size:18px;margin:24px 0 10px 0;padding-bottom:6px;border-bottom:1px solid #444">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 style="color:#667eea;font-size:22px;margin:24px 0 12px 0;padding-bottom:8px;border-bottom:2px solid #667eea">$1</h1>')
+    // 굵게 + 이탤릭
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong style="color:#e2e8f0"><em>$1</em></strong>')
+    // 굵게
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#e2e8f0">$1</strong>')
+    // 이탤릭
+    .replace(/\*(.+?)\*/g, '<em style="color:#cbd5e1">$1</em>')
+    // 구분선
+    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #333;margin:16px 0"/>')
+    // 체크박스
+    .replace(/^- \[x\] (.+)$/gm, '<div style="padding:4px 0;color:#4ade80">✅ $1</div>')
+    .replace(/^- \[ \] (.+)$/gm, '<div style="padding:4px 0;color:#888">⬜ $1</div>')
+    // 숫자 리스트
+    .replace(/^(\d+)\. (.+)$/gm, '<div style="padding:4px 0 4px 8px;margin:2px 0"><span style="color:#667eea;font-weight:700;margin-right:8px">$1.</span>$2</div>')
+    // 불릿 리스트
+    .replace(/^[-•] (.+)$/gm, '<div style="padding:4px 0 4px 8px;margin:2px 0"><span style="color:#667eea;margin-right:8px">●</span>$1</div>')
+    // 인용
+    .replace(/^> (.+)$/gm, '<div style="border-left:3px solid #667eea;padding:8px 14px;margin:8px 0;background:rgba(102,126,234,0.08);border-radius:0 8px 8px 0;color:#a5b4fc">$1</div>')
+    // 빈 줄 → 단락 간격
+    .replace(/\n\n/g, '<div style="height:12px"></div>')
+    // 일반 줄바꿈
+    .replace(/\n/g, '<br/>');
+  return html;
+}
+
 const TABS = [
   { id: 'script', icon: '📝', label: '대본 생성' },
   { id: 'edit', icon: '✨', label: '대본 편집' },
@@ -47,7 +83,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
 
-  // 탭별 결과 저장 (탭 이동해도 유지됨)
+  /* ── 탭별 결과 저장 (이동해도 유지) ── */
   const [results, setResults] = useState<Record<string, string>>({});
 
   const [geminiKey, setGeminiKey] = useState('');
@@ -81,14 +117,10 @@ export default function Home() {
   const [subtitleMode, setSubtitleMode] = useState('subtitles');
   const [mediaMode, setMediaMode] = useState('tts');
 
-  // 현재 탭의 결과 가져오기/설정하기
+  /* ── 현재 탭 결과 가져오기/설정 ── */
   const result = results[tab] || '';
   const setResult = (val: string) => setResults(prev => ({ ...prev, [tab]: val }));
-
-  // 현재 탭의 결과만 초기화
-  function handleReset() {
-    setResults(prev => ({ ...prev, [tab]: '' }));
-  }
+  function handleReset() { setResults(prev => ({ ...prev, [tab]: '' })); }
 
   useEffect(() => {
     const a = localStorage.getItem('ai-factory-auth');
@@ -129,9 +161,11 @@ export default function Home() {
     } catch (e: any) { setResult('❌ ' + e.message); }
     setLoading(false);
   }
+
+  /* ── 모든 핸들러에 API 키 체크 포함 ── */
   function handleScript() {
     if (!topic) { setResult('❌ 주제를 입력해 주세요.'); return; }
-    if (!getKey()) { setResult('❌ API 키를 설정해 주세요.'); return; }
+    if (!getKey()) { setResult('❌ API 키를 설정해 주세요. (우측 상단 🔑 버튼)'); return; }
     callApi('generate-script', { topic, platform, category, duration, audience });
   }
   function handleEdit() {
@@ -215,6 +249,7 @@ export default function Home() {
     }
   }
 
+  /* ── UI 헬퍼 ── */
   const btn = (label: string, onClick: () => void, color = '#667eea') => (
     <button onClick={onClick} disabled={loading} style={{ padding: '12px 24px', borderRadius: 8, background: loading ? '#555' : color, color: '#fff', border: 'none', cursor: loading ? 'wait' : 'pointer', fontSize: 15, fontWeight: 600, width: '100%', marginTop: 8 }}>
       {loading ? '⏳ 처리 중...' : label}
@@ -243,201 +278,111 @@ export default function Home() {
       ))}
     </div>
   );
+
   function renderTab() {
     switch (tab) {
       case 'script':
-        return (
-          <div>
-            <h2>📝 대본 생성</h2>
-            <p style={{ color: '#aaa', marginBottom: 4 }}>플랫폼</p>
-            {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram Reels' }])}
-            <p style={{ color: '#aaa', marginBottom: 4 }}>카테고리</p>
-            {select(category, setCategory, [{ v: '교육/정보', l: '교육/정보' }, { v: '엔터테인먼트', l: '엔터테인먼트' }, { v: '뷰티/패션', l: '뷰티/패션' }, { v: '먹방/요리', l: '먹방/요리' }, { v: '게임', l: '게임' }, { v: '브이로그', l: '브이로그' }, { v: '리뷰', l: '리뷰' }, { v: '뉴스/시사', l: '뉴스/시사' }])}
-            <p style={{ color: '#aaa', marginBottom: 4 }}>영상 길이</p>
-            {select(duration, setDuration, [{ v: '1분 (쇼츠)', l: '1분 (쇼츠)' }, { v: '5분 (짧은)', l: '5분 (짧은)' }, { v: '8분', l: '8분' }, { v: '10분 (중간)', l: '10분 (중간)' }, { v: '15분 (긴)', l: '15분 (긴)' }, { v: '20분+', l: '20분+' }])}
-            <p style={{ color: '#aaa', marginBottom: 4 }}>타깃 시청자</p>
-            {select(audience, setAudience, [{ v: '일반', l: '일반' }, { v: '10대', l: '10대' }, { v: '20대', l: '20대' }, { v: '30대', l: '30대' }, { v: '40대+', l: '40대+' }, { v: '전문가', l: '전문가' }])}
-            <p style={{ color: '#aaa', marginBottom: 4 }}>주제</p>
-            {input(topic, setTopic, '예: 왕초보 유튜브 시작하는 방법')}
-            {btn('🚀 대본 생성', handleScript)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>📝 대본 생성</h2>
+          <p style={{ color: '#aaa', marginBottom: 4 }}>플랫폼</p>
+          {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram Reels' }])}
+          <p style={{ color: '#aaa', marginBottom: 4 }}>카테고리</p>
+          {select(category, setCategory, [{ v: '교육/정보', l: '교육/정보' }, { v: '엔터테인먼트', l: '엔터테인먼트' }, { v: '뷰티/패션', l: '뷰티/패션' }, { v: '먹방/요리', l: '먹방/요리' }, { v: '게임', l: '게임' }, { v: '브이로그', l: '브이로그' }, { v: '리뷰', l: '리뷰' }, { v: '뉴스/시사', l: '뉴스/시사' }])}
+          <p style={{ color: '#aaa', marginBottom: 4 }}>영상 길이</p>
+          {select(duration, setDuration, [{ v: '1분 (쇼츠)', l: '1분 (쇼츠)' }, { v: '5분 (짧은)', l: '5분 (짧은)' }, { v: '8분', l: '8분' }, { v: '10분 (중간)', l: '10분 (중간)' }, { v: '15분 (긴)', l: '15분 (긴)' }, { v: '20분+', l: '20분+' }])}
+          <p style={{ color: '#aaa', marginBottom: 4 }}>타깃 시청자</p>
+          {select(audience, setAudience, [{ v: '일반', l: '일반' }, { v: '10대', l: '10대' }, { v: '20대', l: '20대' }, { v: '30대', l: '30대' }, { v: '40대+', l: '40대+' }, { v: '전문가', l: '전문가' }])}
+          <p style={{ color: '#aaa', marginBottom: 4 }}>주제</p>
+          {input(topic, setTopic, '예: 왕초보 유튜브 시작하는 방법')}
+          {btn('🚀 대본 생성', handleScript)}{resetBtn()}</div>);
       case 'edit':
-        return (
-          <div>
-            <h2>✨ 대본 편집</h2>
-            {miniTab([{ id: 'polish', label: '✨ 교정' }, { id: 'rewrite', label: '🔄 리라이트' }, { id: 'translate', label: '🌐 번역' }], editMode, setEditMode)}
-            {textarea(scriptText, setScriptText, '대본을 붙여넣으세요...')}
-            {editMode === 'translate' && (
-              <>
-                <p style={{ color: '#aaa', marginBottom: 4 }}>번역 언어</p>
-                {select(targetLang, setTargetLang, [{ v: 'en', l: '영어' }, { v: 'ja', l: '일본어' }, { v: 'zh', l: '중국어' }, { v: 'es', l: '스페인어' }, { v: 'vi', l: '베트남어' }, { v: 'th', l: '태국어' }])}
-              </>
-            )}
-            {btn('✨ 편집 실행', handleEdit)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>✨ 대본 편집</h2>
+          {miniTab([{ id: 'polish', label: '✨ 교정' }, { id: 'rewrite', label: '🔄 리라이트' }, { id: 'translate', label: '🌐 번역' }], editMode, setEditMode)}
+          {textarea(scriptText, setScriptText, '대본을 붙여넣으세요...')}
+          {editMode === 'translate' && (<><p style={{ color: '#aaa', marginBottom: 4 }}>번역 언어</p>
+            {select(targetLang, setTargetLang, [{ v: 'en', l: '영어' }, { v: 'ja', l: '일본어' }, { v: 'zh', l: '중국어' }, { v: 'es', l: '스페인어' }, { v: 'vi', l: '베트남어' }, { v: 'th', l: '태국어' }])}</>)}
+          {btn('✨ 편집 실행', handleEdit)}{resetBtn()}</div>);
       case 'guidelines':
-        return (
-          <div>
-            <h2>✅ 가이드라인 체크</h2>
-            <p style={{ color: '#aaa', marginBottom: 4 }}>플랫폼</p>
-            {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
-            {textarea(scriptText, setScriptText, '검사할 대본을 붙여넣으세요...')}
-            {btn('✅ 가이드라인 체크', handleGuidelines)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>✅ 가이드라인 체크</h2>
+          <p style={{ color: '#aaa', marginBottom: 4 }}>플랫폼</p>
+          {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
+          {textarea(scriptText, setScriptText, '검사할 대본을 붙여넣으세요...')}
+          {btn('✅ 가이드라인 체크', handleGuidelines)}{resetBtn()}</div>);
       case 'analysis':
-        return (
-          <div>
-            <h2>🎥 영상 분석</h2>
-            {miniTab([{ id: 'video', label: '🎥 영상 분석' }, { id: 'structure', label: '🏗️ 구조 분석' }], analysisMode, setAnalysisMode)}
-            {input(videoUrl, setVideoUrl, 'YouTube/TikTok 영상 URL 입력')}
-            {btn('🔍 분석', handleAnalysis)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>🎥 영상 분석</h2>
+          {miniTab([{ id: 'video', label: '🎥 영상 분석' }, { id: 'structure', label: '🏗️ 구조 분석' }], analysisMode, setAnalysisMode)}
+          {input(videoUrl, setVideoUrl, 'YouTube/TikTok 영상 URL 입력')}
+          {btn('🔍 분석', handleAnalysis)}{resetBtn()}</div>);
       case 'market':
-        return (
-          <div>
-            <h2>🔍 경쟁·SEO·트렌드</h2>
-            {miniTab([{ id: 'competitors', label: '🔍 경쟁 비교' }, { id: 'seo', label: '🔎 SEO' }, { id: 'trends', label: '📈 트렌드' }], marketMode, setMarketMode)}
-            {input(keyword, setKeyword, '키워드 입력 (예: 유튜브 성장법)')}
-            {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
-            {btn('🔍 분석', handleMarket)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>🔍 경쟁·SEO·트렌드</h2>
+          {miniTab([{ id: 'competitors', label: '🔍 경쟁 비교' }, { id: 'seo', label: '🔎 SEO' }, { id: 'trends', label: '📈 트렌드' }], marketMode, setMarketMode)}
+          {input(keyword, setKeyword, '키워드 입력 (예: 유튜브 성장법)')}
+          {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
+          {btn('🔍 분석', handleMarket)}{resetBtn()}</div>);
       case 'series':
-        return (
-          <div>
-            <h2>📚 시리즈 기획</h2>
-            {input(topic, setTopic, '시리즈 주제 (예: 초보 유튜버 성장기)')}
-            {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
-            {btn('📚 시리즈 기획', handleSeries)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>📚 시리즈 기획</h2>
+          {input(topic, setTopic, '시리즈 주제 (예: 초보 유튜버 성장기)')}
+          {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
+          {btn('📚 시리즈 기획', handleSeries)}{resetBtn()}</div>);
       case 'community':
-        return (
-          <div>
-            <h2>💬 커뮤니티 글</h2>
-            {input(topic, setTopic, '주제 입력')}
-            {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
-            {btn('💬 커뮤니티 글 생성', handleCommunity)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>💬 커뮤니티 글</h2>
+          {input(topic, setTopic, '주제 입력')}
+          {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
+          {btn('💬 커뮤니티 글 생성', handleCommunity)}{resetBtn()}</div>);
       case 'publish':
-        return (
-          <div>
-            <h2>📄 설명·챕터·체크리스트</h2>
-            {miniTab([{ id: 'description', label: '📄 설명란' }, { id: 'chapters', label: '📑 챕터' }, { id: 'checklist', label: '☑️ 체크리스트' }], publishMode, setPublishMode)}
-            {publishMode === 'chapters' ? textarea(scriptText, setScriptText, '대본을 붙여넣으세요...') : input(topic, setTopic, '영상 제목/주제 입력')}
-            {btn('📄 생성', handlePublish)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>📄 설명·챕터·체크리스트</h2>
+          {miniTab([{ id: 'description', label: '📄 설명란' }, { id: 'chapters', label: '📑 챕터' }, { id: 'checklist', label: '☑️ 체크리스트' }], publishMode, setPublishMode)}
+          {publishMode === 'chapters' ? textarea(scriptText, setScriptText, '대본을 붙여넣으세요...') : input(topic, setTopic, '영상 제목/주제 입력')}
+          {btn('📄 생성', handlePublish)}{resetBtn()}</div>);
       case 'ab-test':
-        return (
-          <div>
-            <h2>🧪 제목 A/B 테스트</h2>
-            <p style={{ color: '#aaa', marginBottom: 4 }}>제목 후보들 (줄바꿈으로 구분)</p>
-            {textarea(titles, setTitles, '제목 1\n제목 2\n제목 3')}
-            {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
-            {btn('🧪 A/B 분석', handleAbTest)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>🧪 제목 A/B 테스트</h2>
+          <p style={{ color: '#aaa', marginBottom: 4 }}>제목 후보들 (줄바꿈으로 구분)</p>
+          {textarea(titles, setTitles, '제목 1\n제목 2\n제목 3')}
+          {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
+          {btn('🧪 A/B 분석', handleAbTest)}{resetBtn()}</div>);
       case 'calendar':
-        return (
-          <div>
-            <h2>📅 콘텐츠 캘린더</h2>
-            {input(channelName, setChannelName, '채널명 입력')}
-            {input(topic, setTopic, '채널 주제 (예: IT 리뷰, 뷰티, 먹방)')}
-            <p style={{ color: '#aaa', marginBottom: 4 }}>기간</p>
-            {select(calendarWeeks, setCalendarWeeks, [{ v: '1', l: '1주' }, { v: '2', l: '2주' }, { v: '4', l: '4주 (1달)' }])}
-            {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
-            {btn('📅 캘린더 생성', handleCalendar)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>📅 콘텐츠 캘린더</h2>
+          {input(channelName, setChannelName, '채널명 입력')}
+          {input(topic, setTopic, '채널 주제 (예: IT 리뷰, 뷰티, 먹방)')}
+          <p style={{ color: '#aaa', marginBottom: 4 }}>기간</p>
+          {select(calendarWeeks, setCalendarWeeks, [{ v: '1', l: '1주' }, { v: '2', l: '2주' }, { v: '4', l: '4주 (1달)' }])}
+          {select(platform, setPlatform, [{ v: 'youtube', l: 'YouTube' }, { v: 'tiktok', l: 'TikTok' }, { v: 'instagram', l: 'Instagram' }])}
+          {btn('📅 캘린더 생성', handleCalendar)}{resetBtn()}</div>);
       case 'subtitle':
-        return (
-          <div>
-            <h2>💬 자막·다운로드</h2>
-            {miniTab([{ id: 'subtitles', label: '💬 자막 추출' }, { id: 'download', label: '⬇️ 다운로드' }], subtitleMode, setSubtitleMode)}
-            {input(videoUrl, setVideoUrl, 'YouTube 영상 URL 입력')}
-            {subtitleMode === 'subtitles' && (
-              <>
-                <p style={{ color: '#aaa', marginBottom: 4 }}>번역 언어 (선택)</p>
-                {select(targetLang, setTargetLang, [{ v: 'none', l: '번역 안 함' }, { v: 'en', l: '영어' }, { v: 'ja', l: '일본어' }, { v: 'zh', l: '중국어' }, { v: 'ko', l: '한국어' }])}
-              </>
-            )}
-            {btn(subtitleMode === 'subtitles' ? '💬 자막 추출' : '⬇️ 정보 가져오기', handleSubtitle)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>💬 자막·다운로드</h2>
+          {miniTab([{ id: 'subtitles', label: '💬 자막 추출' }, { id: 'download', label: '⬇️ 다운로드' }], subtitleMode, setSubtitleMode)}
+          {input(videoUrl, setVideoUrl, 'YouTube 영상 URL 입력')}
+          {subtitleMode === 'subtitles' && (<><p style={{ color: '#aaa', marginBottom: 4 }}>번역 언어 (선택)</p>
+            {select(targetLang, setTargetLang, [{ v: 'none', l: '번역 안 함' }, { v: 'en', l: '영어' }, { v: 'ja', l: '일본어' }, { v: 'zh', l: '중국어' }, { v: 'ko', l: '한국어' }])}</>)}
+          {btn(subtitleMode === 'subtitles' ? '💬 자막 추출' : '⬇️ 정보 가져오기', handleSubtitle)}{resetBtn()}</div>);
       case 'shopping':
-        return (
-          <div>
-            <h2>🛒 쇼핑 콘텐츠</h2>
-            <p style={{ color: '#aaa', marginBottom: 4, fontSize: 12 }}>URL 또는 키워드를 입력하세요 (쿠팡/네이버/틱톡/유튜브 URL 또는 제품 키워드)</p>
-            {input(shopInput, setShopInput, '예: https://www.coupang.com/... 또는 "여름 선크림 추천"')}
-            <p style={{ color: '#aaa', marginBottom: 4 }}>대본 스타일</p>
-            {select(scriptStyle, setScriptStyle, [
-              { v: 'review', l: '🎯 솔직 리뷰형' },
-              { v: 'comparison', l: '⚖️ 비교형' },
-              { v: 'unboxing', l: '📦 언박싱형' },
-              { v: 'tip', l: '💡 꿀팁/활용법형' },
-              { v: 'asmr', l: '🎧 ASMR형' },
-              { v: 'storytelling', l: '📖 스토리텔링형' },
-              { v: 'ranking', l: '🏆 랭킹/TOP N형' },
-              { v: 'haul', l: '🛍️ 하울형' },
-              { v: 'before-after', l: '🔄 비포애프터형' },
-              { v: 'price-shock', l: '💰 가격 충격형' },
-              { v: 'trend-reaction', l: '🔥 트렌드 반응형' },
-              { v: 'gift', l: '🎁 선물 추천형' },
-            ])}
-            <p style={{ color: '#aaa', marginBottom: 4 }}>플랫폼</p>
-            {select(platform, setPlatform, [
-              { v: 'youtube-shorts', l: '📱 YouTube Shorts (60초)' },
-              { v: 'tiktok', l: '🎵 TikTok (15-60초)' },
-              { v: 'instagram-reels', l: '📸 Instagram Reels (30-90초)' },
-            ])}
-            <p style={{ color: '#aaa', marginBottom: 4 }}>추가 제품 정보 (선택)</p>
-            {input(productPrice, setProductPrice, '가격 (예: 29,900원)')}
-            {input(productFeatures, setProductFeatures, '주요 특징 (예: 방수, 50시간 배터리)')}
-            {btn('🛒 쇼핑 콘텐츠 생성', handleShopping)}
-            {resetBtn()}
-          </div>
-        );
+        return (<div><h2>🛒 쇼핑 콘텐츠</h2>
+          <p style={{ color: '#aaa', marginBottom: 4, fontSize: 12 }}>URL 또는 키워드를 입력하세요</p>
+          {input(shopInput, setShopInput, '예: https://www.coupang.com/... 또는 "여름 선크림 추천"')}
+          <p style={{ color: '#aaa', marginBottom: 4 }}>대본 스타일</p>
+          {select(scriptStyle, setScriptStyle, [
+            { v: 'review', l: '🎯 솔직 리뷰형' }, { v: 'comparison', l: '⚖️ 비교형' }, { v: 'unboxing', l: '📦 언박싱형' },
+            { v: 'tip', l: '💡 꿀팁/활용법형' }, { v: 'asmr', l: '🎧 ASMR형' }, { v: 'storytelling', l: '📖 스토리텔링형' },
+            { v: 'ranking', l: '🏆 랭킹/TOP N형' }, { v: 'haul', l: '🛍️ 하울형' }, { v: 'before-after', l: '🔄 비포애프터형' },
+            { v: 'price-shock', l: '💰 가격 충격형' }, { v: 'trend-reaction', l: '🔥 트렌드 반응형' }, { v: 'gift', l: '🎁 선물 추천형' },
+          ])}
+          <p style={{ color: '#aaa', marginBottom: 4 }}>플랫폼</p>
+          {select(platform, setPlatform, [
+            { v: 'youtube-shorts', l: '📱 YouTube Shorts (60초)' }, { v: 'tiktok', l: '🎵 TikTok (15-60초)' }, { v: 'instagram-reels', l: '📸 Instagram Reels (30-90초)' },
+          ])}
+          <p style={{ color: '#aaa', marginBottom: 4 }}>추가 제품 정보 (선택)</p>
+          {input(productPrice, setProductPrice, '가격 (예: 29,900원)')}
+          {input(productFeatures, setProductFeatures, '주요 특징 (예: 방수, 50시간 배터리)')}
+          {btn('🛒 쇼핑 콘텐츠 생성', handleShopping)}{resetBtn()}</div>);
       case 'media':
-        return (
-          <div>
-            <h2>🎨 미디어</h2>
-            {miniTab([{ id: 'tts', label: '🔊 TTS' }, { id: 'thumbnail', label: '🖼️ 썸네일' }], mediaMode, setMediaMode)}
-            {mediaMode === 'tts' ? (
-              <>
-                {textarea(scriptText, setScriptText, 'TTS로 변환할 텍스트...')}
-                {btn('🔊 TTS 생성', handleMedia)}
-              </>
-            ) : (
-              <>
-                {input(topic, setTopic, '썸네일 주제/컨셉 입력')}
-                {btn('🖼️ 썸네일 생성', handleMedia)}
-              </>
-            )}
-            {resetBtn()}
-          </div>
-        );
-      default:
-        return null;
+        return (<div><h2>🎨 미디어</h2>
+          {miniTab([{ id: 'tts', label: '🔊 TTS' }, { id: 'thumbnail', label: '🖼️ 썸네일' }], mediaMode, setMediaMode)}
+          {mediaMode === 'tts' ? (<>{textarea(scriptText, setScriptText, 'TTS로 변환할 텍스트...')}{btn('🔊 TTS 생성', handleMedia)}</>)
+            : (<>{input(topic, setTopic, '썸네일 주제/컨셉 입력')}{btn('🖼️ 썸네일 생성', handleMedia)}</>)}
+          {resetBtn()}</div>);
+      default: return null;
     }
   }
+
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0f0f23, #1a1a3e)', color: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
       {/* Header */}
@@ -470,29 +415,34 @@ export default function Home() {
         </div>
       )}
 
-      {/* Tab Menu - 탭 이동해도 결과 유지! */}
+      {/* Tab Menu - 탭 이동해도 결과 유지 */}
       <div style={{ display: 'flex', overflowX: 'auto', gap: 4, padding: '12px 20px', borderBottom: '1px solid #222' }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: '8px 14px', borderRadius: 8, border: tab === t.id ? '1px solid #667eea' : '1px solid #333', background: tab === t.id ? 'rgba(102,126,234,0.2)' : 'transparent', color: tab === t.id ? '#667eea' : '#888', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 13, flexShrink: 0 }}>
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: '8px 14px', borderRadius: 8, border: tab === t.id ? '1px solid #667eea' : '1px solid #333', background: tab === t.id ? 'rgba(102,126,234,0.2)' : 'transparent', color: tab === t.id ? '#667eea' : '#888', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 13, flexShrink: 0, position: 'relative' }}>
             {t.icon} {t.label}
+            {results[t.id] && !results[t.id].startsWith('❌') && <span style={{ position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: '50%', background: '#4ade80' }} />}
           </button>
         ))}
       </div>
 
       {/* Content */}
       <div style={{ display: 'flex', gap: 20, padding: 20, maxWidth: 1400, margin: '0 auto', flexWrap: 'wrap' }}>
-        {/* Left Panel - Input */}
         <div style={{ flex: 1, minWidth: 340, background: '#1e1e3a', borderRadius: 12, padding: 20, border: '1px solid #333' }}>
           {renderTab()}
         </div>
 
-        {/* Right Panel - Result */}
+        {/* Right Panel - 결과 (마크다운 렌더링) */}
         <div style={{ flex: 1, minWidth: 340, background: '#1e1e3a', borderRadius: 12, padding: 20, border: '1px solid #333' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <h3 style={{ margin: 0 }}>📋 결과</h3>
-            {result && (
-              <button onClick={() => { navigator.clipboard.writeText(result); alert('복사됨!'); }} style={{ padding: '6px 12px', borderRadius: 6, background: '#333', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12 }}>📋 복사</button>
-            )}
+            <div style={{ display: 'flex', gap: 6 }}>
+              {result && (
+                <>
+                  <button onClick={() => { navigator.clipboard.writeText(result); alert('복사됨!'); }} style={{ padding: '6px 12px', borderRadius: 6, background: '#333', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12 }}>📋 복사</button>
+                  <button onClick={handleReset} style={{ padding: '6px 12px', borderRadius: 6, background: '#dc3545', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12 }}>🗑️ 지우기</button>
+                </>
+              )}
+            </div>
           </div>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 40 }}>
@@ -500,22 +450,26 @@ export default function Home() {
               <p style={{ color: '#aaa' }}>AI가 작업 중입니다...</p>
             </div>
           ) : result ? (
-            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#ddd', fontSize: 14, lineHeight: 1.7, margin: 0, maxHeight: '70vh', overflowY: 'auto' }}>{result}</pre>
+            result.startsWith('❌') ? (
+              <div style={{ padding: 20, background: 'rgba(220,53,69,0.1)', borderRadius: 8, border: '1px solid rgba(220,53,69,0.3)', color: '#ff6b6b', fontSize: 15, lineHeight: 1.7 }}>{result}</div>
+            ) : (
+              <div
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(result) }}
+                style={{ color: '#ddd', fontSize: 14, lineHeight: 1.8, maxHeight: '70vh', overflowY: 'auto', padding: '4px 0' }}
+              />
+            )
           ) : (
             <p style={{ color: '#555', textAlign: 'center', padding: 40 }}>왼쪽에서 기능을 선택하고 실행하면 결과가 여기에 표시됩니다.</p>
           )}
         </div>
       </div>
-      {/* Footer */}
+
       <div style={{ textAlign: 'center', padding: '20px', color: '#444', fontSize: 12 }}>
         AI 콘텐츠 팩토리 v2.0 — 쇼핑 콘텐츠 통합 버전
       </div>
 
       <style jsx global>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #1a1a3e; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
