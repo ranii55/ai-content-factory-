@@ -1,26 +1,103 @@
-@import "tailwindcss";
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================
+   TPA Studio — 글로벌 가독성 패치
+   모든 텍스트를 밝은 색으로 강제 지정
+   ============================================ */
+
+/* 1. 기본 바디: 어두운 배경 + 밝은 글씨 */
+html, body {
+  background: #0a0a0a;
+  color: #e0e0e0 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* 2. 모든 요소에 밝은 텍스트 강제 */
+*, *::before, *::after {
+  color: inherit;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* 3. 입력 필드 — 어두운 배경 + 밝은 글씨 */
+input, textarea, select {
+  background: #1a1a2e !important;
+  color: #ffffff !important;
+  border-color: #333366 !important;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+input::placeholder, textarea::placeholder {
+  color: #888 !important;
+}
+
+/* 4. 버튼 텍스트 */
+button {
+  color: #ffffff !important;
+}
+
+/* 5. 라벨, 제목, 설명 텍스트 */
+label, h1, h2, h3, h4, h5, h6, p, span, div, li, td, th {
+  color: #e0e0e0;
+}
+
+/* 6. 링크 */
+a {
+  color: #7c8aff;
+}
+
+/* 7. 사이드바 항목 */
+[style*="cursor: pointer"] {
+  color: #c0c0d0;
+}
+
+/* 8. 선택된 탭/항목 강조 */
+[style*="background: linear-gradient"] {
+  color: #ffffff !important;
+}
+
+/* 9. 카드/패널 내부 텍스트 */
+[style*="background:"][style*="#1"] {
+  color: #e0e0e0 !important;
+}
+
+[style*="background:"][style*="#0"] {
+  color: #e0e0e0 !important;
+}
+
+[style*="background:"][style*="#2"] {
+  color: #e0e0e0 !important;
+}
+
+/* 10. 결과 영역 마크다운 텍스트 */
+pre, code {
+  background: #111 !important;
+  color: #00ff88 !important;
+}
+
+/* 11. 스크롤바 스타일링 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+/* 12. 로그인 화면 텍스트 */
+input[type="password"] {
+  color: #ffffff !important;
+  background: #1a1a2e !important;
+}
+
+/* 13. 장르 카드 내 텍스트 확실히 보이게 */
+[style*="border-radius"] {
+  color: #e0e0e0;
+}
+
+/* 14. 모든 인라인 color 오버라이드 (최후 수단) */
+body * {
+  --force-text: #e0e0e0;
 }
