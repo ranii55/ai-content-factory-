@@ -113,8 +113,10 @@ const OUTPUT_LANGUAGES = [
   {id:'ja',label:'일본어',icon:'🇯🇵'},{id:'zh',label:'중국어',icon:'🇨🇳'},
 ];
 const TTS_ENGINES = [
+  {id:'gemini',label:'Google AI Studio TTS (무료)',icon:'🔴',free:true},
   {id:'supertonic',label:'SuperTonic (무료로컬)',icon:'🟢',free:true},
   {id:'edge',label:'Microsoft Edge (무료제한)',icon:'🔵',free:true},
+  {id:'openai',label:'OpenAI TTS (유료)',icon:'⚪',free:false},
   {id:'cloud1',label:'Cloud TTS A (월100만자)',icon:'🟡',free:false},
   {id:'cloud2',label:'Cloud TTS B (월100만자)',icon:'🟣',free:false},
 ];
@@ -288,7 +290,7 @@ export default function Home(){
   const [registeredScript,setRegisteredScript]=useState('');
 
   /* TTS F37-F47 */
-  const [ttsEngine,setTtsEngine]=useState('supertonic');
+  const [ttsEngine,setTtsEngine]=useState('gemini');
   const [ttsSplitMode,setTtsSplitMode]=useState('punctuation');
   const [ttsSegments,setTtsSegments]=useState<{speaker:string;text:string;status:string;engine:string}[]>([]);
   const [ttsSpeakerEngines,setTtsSpeakerEngines]=useState<Record<string,string>>({});
@@ -2128,6 +2130,7 @@ export default function Home(){
     </div>
   );
 }
+
 
 
 
