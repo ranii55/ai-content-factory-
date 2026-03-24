@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 
 const SCRIPT_STYLES: Record<string, string> = {
   'review': '솔직 리뷰형: "이거 써봤는데 솔직히..." 스타일. 실제 사용 후기처럼 장단점을 솔직하게 비교하고, 별점 멘트를 넣어 신뢰감을 최대화하세요.',
