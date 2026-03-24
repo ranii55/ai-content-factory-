@@ -2,8 +2,9 @@
 
 export async function POST(req: NextRequest) {
   try {
-    const { scriptText, platform, aiProvider, apiKey } = await req.json();
-    if (!scriptText || !apiKey) {
+    const { script, scriptText, platform, aiProvider, apiKey } = await req.json();
+    const text = script || scriptText;
+    if (!text || !apiKey) {
       return NextResponse.json({ error: '대본과 API 키가 필요합니다.' }, { status: 400 });
     }
 
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
 7. 개인정보 노출 위험
 
 대본:
-${scriptText}
+${text}
 
 각 항목별로 ✅ 통과 / ⚠️ 주의 / ❌ 위반 으로 판정하고, 구체적인 수정 제안을 해주세요.
 마지막에 종합 점수(100점 만점)를 알려주세요.`;

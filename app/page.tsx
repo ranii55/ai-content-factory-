@@ -138,6 +138,11 @@ export default function Home() {
     if (!scriptText) { setResult('❌ 대본을 입력해 주세요.'); return; }
     callApi('check-guidelines', { script: scriptText, platform });
   }
+    function handleGuidelines() {
+    if (!scriptText) { setResult('❌ 대본을 입력해 주세요.'); return; }
+    callApi('check-guidelines', { script: scriptText, platform });
+  }
+
   function handleAnalysis() {
     if (!videoUrl) { setResult('❌ 영상 URL을 입력해 주세요.'); return; }
     if (analysisMode === 'video') callApi('analyze-video', { url: videoUrl, platform });
