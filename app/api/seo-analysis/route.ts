@@ -1,108 +1,57 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from 'next/server';
 
-async function callAI(prompt: string, systemPrompt: string, provider: string, apiKey: string): Promise<string> {
-  if (provider === "gemini") {
-    const { GoogleGenAI } = await import("@google/genai");
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: { systemInstruction: systemPrompt },
-    });
-    return response.text || "";
-  } else if (provider === "openai") {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: prompt }],
-        max_tokens: 4096,
-      }),
-    });
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || "";
-  } else if (provider === "claude") {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    const data = await res.json();
-    return data.content?.[0]?.text || "";
-  }
-  throw new Error("지원하지 않는 AI");
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const { script, title, provider, apiKey } = await request.json();
-    if (!script || !provider || !apiKey) {
-      return NextResponse.json({ error: "필수 항목이 누락되었습니다." }, { status: 400 });
+    const { keyword, platform, aiProvider, apiKey } = await req.json();
+    if (!keyword || !apiKey) {
+      return NextResponse.json({ error: '키워드와 API 키가 필요합니다.' }, { status: 400 });
     }
 
-    const systemPrompt = `당신은 유튜브 SEO 분석 전문가입니다.
-대본과 제목을 분석하여 검색 최적화 점수와 개선 방안을 제공합니다.
-유튜브 알고리즘에 대한 깊은 이해를 바탕으로 분석합니다.`;
+    const prompt = `"${keyword}" 키워드의 ${platform || 'YouTube'} SEO 분석을 해주세요:
 
-    const prompt = `아래 유튜브 대본과 제목의 SEO를 분석해주세요.
+1. 키워드 검색량 추정 (높음/중간/낮음)
+2. 경쟁 강도 분석
+3. 추천 메인 키워드 5개
+4. 추천 롱테일 키워드 10개
+5. 최적화된 제목 3개 제안
+6. SEO 최적화 설명란 템플릿
+7. 추천 태그 20개
+8. 해시태그 추천 15개
+9. 검색 노출 전략
 
-${title ? `제목: ${title}` : ""}
-대본:
-${script}
+상세하게 분석해주세요.`;
 
-반드시 아래 JSON 형식으로만 응답하세요:
-{
-  "overallScore": 75,
-  "titleScore": 80,
-  "keywordAnalysis": {
-    "mainKeywords": ["핵심 키워드1", "핵심 키워드2"],
-    "density": "키워드 밀도 설명",
-    "missingKeywords": ["추가 추천 키워드1", "추가 추천 키워드2"]
-  },
-  "titleAnalysis": {
-    "current": "현재 제목 분석",
-    "suggestions": ["개선된 제목 1", "개선된 제목 2", "개선된 제목 3"],
-    "clickbaitScore": 70,
-    "seoScore": 75
-  },
-  "contentAnalysis": {
-    "topicRelevance": "주제 관련성 분석",
-    "searchIntent": "검색 의도 매칭 분석",
-    "competitiveness": "경쟁도 분석"
-  },
-  "recommendations": [
-    "구체적인 SEO 개선 제안 1",
-    "구체적인 SEO 개선 제안 2",
-    "구체적인 SEO 개선 제안 3",
-    "구체적인 SEO 개선 제안 4",
-    "구체적인 SEO 개선 제안 5"
-  ],
-  "tagSuggestions": ["태그1", "태그2", "태그3", "태그4", "태그5"]
-}
+    let result = '';
 
-점수는 0~100 사이로 매겨주세요.`;
-
-    const result = await callAI(prompt, systemPrompt, provider, apiKey);
-    let parsed;
-    try {
-      const jsonMatch = result.match(/\{[\s\S]*\}/);
-      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { raw: result };
-    } catch {
-      parsed = { raw: result };
+    if (aiProvider === 'gemini') {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      });
+      const data = await res.json();
+      result = data.candidates?.[0]?.content?.parts?.[0]?.text || '결과를 생성할 수 없습니다.';
+    } else if (aiProvider === 'openai') {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 4000 }),
+      });
+      const data = await res.json();
+      result = data.choices?.[0]?.message?.content || '결과를 생성할 수 없습니다.';
+    } else if (aiProvider === 'claude') {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] }),
+      });
+      const data = await res.json();
+      result = data.content?.[0]?.text || '결과를 생성할 수 없습니다.';
     }
-    return NextResponse.json({ success: true, data: parsed });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "SEO 분석 실패";
-    return NextResponse.json({ error: message }, { status: 500 });
+
+    return NextResponse.json({ result });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'SEO 분석 중 오류 발생' }, { status: 500 });
   }
 }
+

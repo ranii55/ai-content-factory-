@@ -1,93 +1,58 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from 'next/server';
 
-async function callAI(prompt: string, systemPrompt: string, provider: string, apiKey: string): Promise<string> {
-  if (provider === "gemini") {
-    const { GoogleGenAI } = await import("@google/genai");
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: { systemInstruction: systemPrompt },
-    });
-    return response.text || "";
-  } else if (provider === "openai") {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: prompt }],
-      }),
-    });
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || "";
-  } else if (provider === "claude") {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        system: systemPrompt,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    const data = await res.json();
-    return data.content?.[0]?.text || "";
-  }
-  throw new Error("지원하지 않는 AI");
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const { topic, episodeCount, category, provider, apiKey } = await request.json();
-    if (!topic || !provider || !apiKey) {
-      return NextResponse.json({ error: "필수 항목이 누락되었습니다." }, { status: 400 });
+    const { topic, platform, aiProvider, apiKey } = await req.json();
+    if (!topic || !apiKey) {
+      return NextResponse.json({ error: '주제와 API 키가 필요합니다.' }, { status: 400 });
     }
 
-    const count = episodeCount || 5;
+    const prompt = `"${topic}" 주제로 ${platform || 'YouTube'} 시리즈를 기획해주세요:
 
-    const systemPrompt = "당신은 유튜브 시리즈 콘텐츠 기획 전문가입니다. 하나의 주제를 여러 에피소드로 나누어 시청자가 계속 보고 싶어하는 시리즈를 기획합니다. 각 에피소드마다 강력한 훅과 다음 편 예고를 포함합니다.";
-    const prompt = `아래 주제로 ${count}편짜리 유튜브 시리즈를 기획하세요.
+1. 시리즈 제목 (메인)
+2. 시리즈 컨셉 설명
+3. 타깃 시청자
+4. 에피소드 구성 (8~12편)
+   - 각 에피소드 제목
+   - 핵심 내용 요약
+   - 예상 길이
+5. 시리즈 촬영 순서 추천
+6. 시리즈 홍보 전략
+7. 수익화 방안
 
-주제: ${topic}
-카테고리: ${category || "일반"}
-에피소드 수: ${count}편
+상세하게 기획해주세요.`;
 
-각 에피소드는:
-- 독립적으로도 볼 수 있지만 시리즈로 이어지는 구성
-- 첫 3초 훅이 강력할 것
-- 다음 편이 궁금해지는 마무리
+    let result = '';
 
-반드시 아래 JSON 형식으로만 응답하세요:
-{
-  "seriesTitle": "시리즈 전체 제목",
-  "concept": "시리즈 전체 컨셉 설명 (2~3문장)",
-  "episodes": [
-    {
-      "episodeNumber": 1,
-      "title": "에피소드 제목",
-      "summary": "에피소드 내용 요약 (3~4문장)",
-      "hook": "첫 3초 훅 문장"
+    if (aiProvider === 'gemini') {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      });
+      const data = await res.json();
+      result = data.candidates?.[0]?.content?.parts?.[0]?.text || '결과를 생성할 수 없습니다.';
+    } else if (aiProvider === 'openai') {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], max_tokens: 4000 }),
+      });
+      const data = await res.json();
+      result = data.choices?.[0]?.message?.content || '결과를 생성할 수 없습니다.';
+    } else if (aiProvider === 'claude') {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] }),
+      });
+      const data = await res.json();
+      result = data.content?.[0]?.text || '결과를 생성할 수 없습니다.';
     }
-  ]
-}`;
 
-    const result = await callAI(prompt, systemPrompt, provider, apiKey);
-    let parsed;
-    try {
-      const jsonMatch = result.match(/\{[\s\S]*\}/);
-      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { raw: result };
-    } catch {
-      parsed = { raw: result };
-    }
-    return NextResponse.json({ success: true, data: parsed });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "시리즈 기획 실패";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ result });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || '시리즈 기획 중 오류 발생' }, { status: 500 });
   }
 }
+
