@@ -2,15 +2,21 @@
 
 export async function POST(req: NextRequest) {
   try {
-    const { scriptText, aiProvider, apiKey } = await req.json();
-    if (!scriptText || !apiKey) {
-      return NextResponse.json({ error: '대본과 API 키가 필요합니다.' }, { status: 400 });
+    const body = await req.json();
+    const { script, scriptText, aiProvider, apiKey } = body;
+    const text = script || scriptText;
+    
+    if (!text) {
+      return NextResponse.json({ error: '대본을 입력해 주세요.' }, { status: 400 });
+    }
+    if (!apiKey) {
+      return NextResponse.json({ error: 'API 키를 설정해 주세요. (우측 상단 🔑 버튼)' }, { status: 400 });
     }
 
     const prompt = `다음 대본을 분석해서 YouTube 챕터(타임스탬프)를 생성해주세요:
 
 대본:
-${scriptText}
+${text}
 
 요구사항:
 1. 주요 주제 변경 지점을 찾아서 챕터 구분
@@ -54,4 +60,3 @@ ${scriptText}
     return NextResponse.json({ error: error.message || '챕터 생성 중 오류 발생' }, { status: 500 });
   }
 }
-

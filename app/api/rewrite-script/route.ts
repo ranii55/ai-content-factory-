@@ -2,9 +2,15 @@
 
 export async function POST(req: NextRequest) {
   try {
-    const { scriptText, aiProvider, apiKey } = await req.json();
-    if (!scriptText || !apiKey) {
-      return NextResponse.json({ error: '대본과 API 키가 필요합니다.' }, { status: 400 });
+    const body = await req.json();
+    const { script, scriptText, platform, aiProvider, apiKey } = body;
+    const text = script || scriptText;
+    
+    if (!text) {
+      return NextResponse.json({ error: '대본을 입력해 주세요.' }, { status: 400 });
+    }
+    if (!apiKey) {
+      return NextResponse.json({ error: 'API 키를 설정해 주세요. (우측 상단 🔑 버튼)' }, { status: 400 });
     }
 
     const prompt = `다음 대본을 완전히 새로운 스타일로 리라이트해주세요:
@@ -14,7 +20,7 @@ export async function POST(req: NextRequest) {
 - 원본의 핵심 메시지는 유지
 
 원본 대본:
-${scriptText}
+${text}
 
 리라이트된 대본을 출력해주세요.`;
 
@@ -51,4 +57,3 @@ ${scriptText}
     return NextResponse.json({ error: error.message || '리라이트 중 오류 발생' }, { status: 500 });
   }
 }
-
